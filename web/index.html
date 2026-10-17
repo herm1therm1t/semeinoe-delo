@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Семейное Дело</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=VT323&display=swap&subset=cyrillic" rel="stylesheet">
+<style>
+:root{
+  --bg:#efe4cc; --card:#f7efdc; --card2:#e8dabb; --text:#2a1d14; --muted:#7a6248; --line:#c9b48e;
+  --red:#8e1b14; --gold:#9a7413; --good:#4f6b2a; --bad:#8e1b14; --ink:#1a120c;
+  --lcd:#9fb27a; --lcdtext:#1f2a12;
+  --shadow:0 1px 0 rgba(0,0,0,.08), 0 8px 20px rgba(60,35,10,.12);
+  --vig:rgba(80,45,15,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#120d0a; --card:#1d1612; --card2:#2a1f18; --text:#ecdcc0; --muted:#a08a6c; --line:#3d2c20;
+    --red:#c0392b; --gold:#c9a227; --good:#8fa65a; --bad:#d4553f; --ink:#ecdcc0;
+    --lcd:#7f9a4e; --lcdtext:#162009; --shadow:0 10px 30px rgba(0,0,0,.5); --vig:rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#120d0a; --card:#1d1612; --card2:#2a1f18; --text:#ecdcc0; --muted:#a08a6c; --line:#3d2c20;
+  --red:#c0392b; --gold:#c9a227; --good:#8fa65a; --bad:#d4553f; --ink:#ecdcc0;
+  --lcd:#7f9a4e; --lcdtext:#162009; --shadow:0 10px 30px rgba(0,0,0,.5); --vig:rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:17px/1.4 "EB Garamond",Georgia,serif}
+body{padding-bottom:84px;overflow-x:hidden}
+/* плёночное зерно и виньетка */
+body::before{content:"";position:fixed;inset:-50%;pointer-events:none;z-index:40;opacity:.09;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain .6s steps(4) infinite}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:39;box-shadow:inset 0 0 120px var(--vig)}
+@keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.mono{font-family:"Special Elite","Courier New",monospace}
+h1{font:italic 900 34px/1.05 "Playfair Display",serif;margin:2px 0 4px;letter-spacing:-.01em}
+h2{font:700 13px "Special Elite",monospace;text-transform:uppercase;letter-spacing:.18em;margin:26px 0 10px;color:var(--muted);display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.sub{color:var(--muted);font-size:14px}
+.kicker{font:12px "Special Elite",monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--red)}
+.mast{border-top:3px double var(--line);border-bottom:3px double var(--line);padding:10px 0 8px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:3px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px;position:relative}
+.row{display:flex;gap:8px;align-items:center}
+.between{justify-content:space-between}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:2px;background:transparent;font:12px "Special Elite",monospace;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);cursor:pointer;white-space:nowrap;color:var(--text)}
+.chip.on{background:var(--red);border-color:var(--red);color:#f3e6cc}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+button.btn{border:1px solid var(--red);border-radius:2px;padding:12px 14px;font:14px "Special Elite",monospace;letter-spacing:.14em;text-transform:uppercase;background:var(--red);color:#f3e6cc;cursor:pointer;width:100%}
+button.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+button.sm{padding:7px 10px;font-size:12px;width:auto;letter-spacing:.08em}
+textarea,input{width:100%;font:17px "EB Garamond",serif;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:2px;padding:10px 12px;outline:none;resize:vertical}
+textarea:focus,input:focus{border-color:var(--gold)}
+/* главная карточка — как кадр с леттербоксом */
+.reel{background:#0d0907;color:#ecdcc0;border:0;padding:0;overflow:hidden}
+.reel .in{padding:16px;background:radial-gradient(ellipse at 30% 0%,rgba(201,162,39,.22),transparent 60%),linear-gradient(180deg,#2a1810,#140c08)}
+.reel::before,.reel::after{content:"";display:block;height:10px;background:#000}
+.reel .sub{color:#b9a07c}
+.reel textarea{background:rgba(255,240,210,.06);border-color:#4a3526;color:#ecdcc0}
+.reel .chip{color:#ecdcc0;border-color:#4a3526}
+.reel .chip.on{background:#c0392b;border-color:#c0392b}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:3px double var(--line);display:flex;justify-content:space-around;padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:10}
+.tab{flex:1;text-align:center;font:11px "Special Elite",monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);cursor:pointer;padding:4px 0}
+.tab .ic{font:italic 700 18px "Playfair Display",serif;display:block;line-height:1.2}
+.tab.on{color:var(--red)}
+.tab.on .ic::after{content:"";display:block;width:18px;height:2px;background:var(--red);margin:2px auto 0}
+.page{display:none;animation:fade .35s ease}
+.page.on{display:block}
+@keyframes fade{from{opacity:0;filter:sepia(1) brightness(.6)}to{opacity:1;filter:none}}
+.net{min-width:28px;height:22px;padding:0 4px;border:1.5px solid currentColor;border-radius:2px;display:inline-grid;place-items:center;font:11px "Special Elite",monospace;flex:none;transform:rotate(-3deg);color:var(--red)}
+.n-ig{color:var(--gold)}.n-yt{color:var(--red)}.n-tt{color:var(--ink)}.n-tg{color:var(--good)}
+.day{background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
+.dayhead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer}
+.dayhead b{font:italic 700 19px "Playfair Display",serif}
+.today{font:11px "Special Elite",monospace;color:var(--red);border:1.5px solid var(--red);padding:1px 6px;margin-left:8px;text-transform:uppercase;display:inline-block;transform:rotate(-4deg)}
+.daybody{padding:0 14px 14px;display:none;border-top:1px dashed var(--line)}
+.day.open .daybody{display:block;padding-top:12px}
+.post{background:var(--card2);border-left:3px solid var(--gold);padding:10px 30px 10px 10px;margin-bottom:8px;position:relative;cursor:pointer}
+.post .t{font-weight:600}
+.post .time{font-family:"Special Elite",monospace;color:var(--red);margin-right:6px}
+.post .meta{font-size:12px;color:var(--muted);margin-top:5px}
+.post .x{position:absolute;top:4px;right:6px;color:var(--muted);cursor:pointer;font-size:20px;background:none;border:0;font-family:inherit}
+.count{font:12px "Special Elite",monospace;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line)}
+.kpi{padding:10px;border-right:1px solid var(--line)}
+.kpi:last-child{border-right:0}
+.kpi .v{font:900 24px "Playfair Display",serif}
+.kpi .l{font:10px "Special Elite",monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.up{color:var(--good)}.down{color:var(--bad)}
+.rec{display:flex;gap:12px;padding:10px 0;border-top:1px dashed var(--line)}
+.rec:first-of-type{border-top:0}
+.rec .e{font:900 22px "Playfair Display",serif;color:var(--red);min-width:22px}
+.mat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.thumb{aspect-ratio:1;background:var(--card2);display:grid;place-items:center;font-size:28px;position:relative;cursor:pointer;border:6px solid #f4ead6;border-bottom-width:18px;box-shadow:0 2px 6px rgba(0,0,0,.25);filter:sepia(.55) contrast(1.05)}
+.thumb:nth-child(odd){transform:rotate(-1.5deg)}.thumb:nth-child(even){transform:rotate(1.2deg)}
+.thumb.sel{outline:2px solid var(--red);outline-offset:2px;filter:none}
+.thumb small{position:absolute;bottom:-16px;left:0;right:0;text-align:center;font:9px "Special Elite",monospace;color:#5a4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai{border-left:2px solid var(--red);padding-left:10px;margin:10px 0}
+.ai .sub{font:11px "Special Elite",monospace;text-transform:uppercase;letter-spacing:.12em;color:var(--red)}
+.typing::after{content:"▍";animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+.sheet-bg{position:fixed;inset:0;background:rgba(10,6,3,.6);display:none;z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:3px double var(--line);padding:16px 16px calc(16px + env(safe-area-inset-bottom));z-index:21;transform:translateY(100%);transition:transform .25s ease,visibility .25s;max-height:88vh;overflow:auto;visibility:hidden}
+.sheet.on{transform:none;visibility:visible}
+.sheet-bg.on{display:block}
+label.f{display:block;font:11px "Special Elite",monospace;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:12px 0 5px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#0d0907;color:#ecdcc0;border:1px solid var(--gold);padding:9px 14px;font:13px "Special Elite",monospace;opacity:0;transition:opacity .2s;z-index:50;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1}
+.edit-prev{aspect-ratio:9/16;max-height:340px;margin:0 auto;display:grid;place-items:center;position:relative;overflow:hidden;background:radial-gradient(ellipse,#3a2416,#0d0907);border:8px solid #000}
+.edit-prev .cap{position:absolute;left:10px;right:10px;bottom:22px;text-align:center;font:italic 700 20px "Playfair Display",serif;color:#f3e6cc;text-shadow:0 2px 8px #000}
+.edit-prev .rec-dot{position:absolute;top:10px;left:12px;font:14px "VT323",monospace;color:#ff5a3c}
+.edit-prev .stamp{position:absolute;bottom:4px;right:10px;font:15px "VT323",monospace;color:#ffb347}
+.timeline{display:flex;gap:2px;margin-top:10px;background:#000;padding:6px 4px;position:relative}
+.timeline::before,.timeline::after{content:"";position:absolute;left:0;right:0;height:3px;background:repeating-linear-gradient(90deg,transparent 0 6px,#5a4632 6px 10px)}
+.timeline::before{top:0}.timeline::after{bottom:0}
+.clip{flex:1;height:36px;display:grid;place-items:center;font:11px "Special Elite",monospace;color:#f3e6cc}
+svg text{fill:var(--muted);font:11px "Special Elite",monospace}
+/* пейджер для напоминаний */
+.pager{background:linear-gradient(180deg,#2b2b2b,#141414);border-radius:14px;padding:12px;box-shadow:var(--shadow),inset 0 1px 0 #444;margin-bottom:12px}
+.pager .lcd{background:var(--lcd);color:var(--lcdtext);font:20px/1.15 "VT323",monospace;padding:8px 10px;border-radius:4px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);min-height:70px}
+.pager .lcd .blink{animation:blink 1.2s infinite}
+.pager .keys{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font:11px "Special Elite",monospace;color:#9a9a9a;text-transform:uppercase;letter-spacing:.1em}
+.pager .key{background:#333;border:1px solid #555;color:#ddd;border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit}
+.switch{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px dashed var(--line)}
+.switch:first-of-type{border-top:0}
+.tgl{width:46px;height:24px;border:1.5px solid var(--line);border-radius:2px;position:relative;cursor:pointer;flex:none;background:var(--card2)}
+.tgl::after{content:"ВЫКЛ";position:absolute;inset:2px 2px 2px auto;width:22px;font:8px/18px "Special Elite",monospace;text-align:center;background:var(--muted);color:var(--card)}
+.tgl.on{border-color:var(--red)}
+.tgl.on::after{content:"ВКЛ";inset:2px auto 2px 2px;background:var(--red);color:#f3e6cc}
+.quote{font:italic 17px "EB Garamond",serif;color:var(--muted);text-align:center;margin:22px 8px 8px}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.st{font:11px "Special Elite",monospace;text-transform:uppercase;letter-spacing:.06em;padding:1px 5px;border:1px solid currentColor;transform:rotate(-2deg);display:inline-block}
+.st.ok{color:var(--good)}.st.bad{color:var(--bad)}.st.man{color:var(--gold)}
+.empty{text-align:center;padding:18px 8px;color:var(--muted)}
+.weeknav{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.gate{position:fixed;inset:0;display:none;place-items:center;background:var(--bg);z-index:60;padding:24px;text-align:center}
+.gate.on{display:grid}
+.busy{opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="gate" id="gate"><div><div class="kicker">Семейное дело</div><h1>Только для своих</h1><div class="sub" id="gateMsg">Открой приложение через бота в Telegram.</div></div></div>
+<div class="wrap">
+
+<!-- ТЕМЫ -->
+<section class="page on" id="p-ideas">
+  <div class="mast row between">
+    <div><div class="kicker" id="dateLine"></div><h1>Семейное<br>дело</h1><div class="sub">Контент, от которого не отказываются</div></div>
+    <span class="chip" id="themeBtn" title="Сменить тему">☾ / ☀</span>
+  </div>
+
+  <div class="pager" id="pagerCard">
+    <div class="lcd" id="pagerLcd">ЗАГРУЗКА...</div>
+    <div class="keys"><span>пейджер · напоминания</span><button class="key" id="pagerNext">▸ далее</button></div>
+  </div>
+
+  <div class="card reel"><div class="in">
+    <div class="kicker" style="color:#c9a227">Новое дело</div>
+    <div style="font:italic 700 22px 'Playfair Display',serif;margin:2px 0 4px">О чём снимаем?</div>
+    <div class="sub" style="margin-bottom:10px">Набросай тему в двух словах. Claude развернёт её в сценарий и черновики под каждую площадку.</div>
+    <textarea id="ideaIn" rows="2" placeholder="например: утренняя рутина продуктивного человека"></textarea>
+    <div class="chips" style="margin-top:8px" id="ideaNets"></div>
+    <button class="btn" style="margin-top:10px;background:#c0392b;border-color:#c0392b" id="expandBtn">Развернуть тему</button>
+  </div></div>
+
+  <div id="aiOut"></div>
+
+  <h2>Дела в работе</h2>
+  <div id="ideaList"></div>
+  <div class="quote">«Каждое утро ты встаёшь и делаешь контент. Такая работа.»</div>
+</section>
+
+<!-- НЕДЕЛЯ -->
+<section class="page" id="p-week">
+  <div class="mast"><div class="kicker">Расписание</div><h1>Неделя</h1><div class="sub mono" id="chanLine"></div></div>
+  <div class="weeknav"><button class="btn ghost sm" id="prevWeek">◂ Назад</button><span class="mono" id="weekRange"></span><button class="btn ghost sm" id="nextWeek">Вперёд ▸</button></div>
+  <div class="chips" style="margin:0 0 12px" id="weekFilter"></div>
+  <div id="week"></div>
+</section>
+
+<!-- СТУДИЯ -->
+<section class="page" id="p-studio">
+  <div class="mast"><div class="kicker">Монтажная</div><h1>Студия</h1><div class="sub">Поиск материалов и сборка поста</div></div>
+  <div class="card">
+    <div class="row"><input id="searchIn" placeholder="Что ищем? (лучше по-английски)"><button class="btn sm" id="searchBtn">Найти</button></div>
+    <div class="chips" style="margin-top:10px" id="matTypes"></div>
+  </div>
+  <div class="mat" id="mats" style="margin:16px 4px 26px"></div>
+
+  <h2>Сборка</h2>
+  <div class="card">
+    <div class="edit-prev" id="prev"><span class="rec-dot">● REC</span><span style="font-size:52px;filter:sepia(.6)" id="prevEmoji">🎬</span><div class="cap" id="prevCap">Твой текст на видео</div><span class="stamp" id="stamp"></span></div>
+    <div class="timeline" id="timeline"></div>
+    <label class="f">Текст / тема</label>
+    <input id="capIn" value="Твой текст на видео">
+    <label class="f">Формат</label>
+    <div class="chips" id="fmt"></div>
+    <div class="sub" style="margin-top:10px">Автомонтаж видео появится в следующей версии. Сейчас выбранные материалы прикрепляются к посту.</div>
+    <button class="btn" style="margin-top:12px" id="toWeek">В расписание</button>
+  </div>
+</section>
+
+<!-- СТАТИСТИКА -->
+<section class="page" id="p-stats">
+  <div class="mast"><div class="kicker">Бухгалтерия</div><h1>Статистика</h1><div class="sub mono" id="statsSub">последние 7 дней</div></div>
+  <div class="chips" style="margin-bottom:12px" id="statNets"></div>
+  <div id="statsBody"></div>
+</section>
+
+<!-- НАПОМИНАНИЯ -->
+<section class="page" id="p-remind">
+  <div class="mast"><div class="kicker">Чтобы ничего не забыть</div><h1>Напоминания</h1><div class="sub">Бот пишет тебе в Telegram</div></div>
+  <div class="card">
+    <div class="switch"><div><div style="font-weight:600">Утренняя сводка</div><div class="sub">План на день: что и куда постим</div></div><div class="row"><input type="time" id="dailyTime" style="width:112px;padding:6px"><div class="tgl" id="dailyTgl"></div></div></div>
+    <div class="switch" style="flex-wrap:wrap"><div><div style="font-weight:600">Перед каждым постом</div><div class="sub">По умолчанию для новых постов</div></div><div class="chips" id="defRem"></div></div>
+    <div class="switch"><div><div style="font-weight:600">Пустой день</div><div class="sub">В 20:00, если на завтра ничего нет</div></div><div class="tgl" id="emptyTgl"></div></div>
+    <div class="switch"><div><div style="font-weight:600">Итоги недели</div><div class="sub">В воскресенье в 19:00</div></div><div class="tgl" id="weeklyTgl"></div></div>
+  </div>
+  <h2>Ближайшие</h2>
+  <div class="card" id="remList"></div>
+</section>
+</div>
+
+<nav class="tabbar">
+  <div class="tab on" data-p="ideas"><span class="ic">I</span>Темы</div>
+  <div class="tab" data-p="week"><span class="ic">II</span>Неделя</div>
+  <div class="tab" data-p="studio"><span class="ic">III</span>Студия</div>
+  <div class="tab" data-p="stats"><span class="ic">IV</span>Цифры</div>
+  <div class="tab" data-p="remind"><span class="ic">V</span>Пейджер</div>
+</nav>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet">
+  <div class="kicker" id="shKicker">Новый пост</div>
+  <div style="font:italic 700 24px 'Playfair Display',serif" id="shTitle"></div>
+  <div id="shStatus" class="sub"></div>
+  <label class="f">Тема</label><input id="shTopic" placeholder="О чём пост">
+  <label class="f">Текст</label><textarea id="shText" rows="5" placeholder="Текст поста"></textarea>
+  <label class="f">Куда</label><div class="chips" id="shNets"></div>
+  <div class="row"><div style="flex:1"><label class="f">День</label><input id="shDate" type="date"></div><div style="flex:1"><label class="f">Время</label><input id="shTime" type="time" value="18:00"></div></div>
+  <label class="f">Напомнить</label><div class="chips" id="shRem"></div>
+  <label class="f">Материалы</label>
+  <div class="row"><button class="btn ghost sm" id="shFile">Прикрепить</button><span class="sub" id="shFiles">ничего не прикреплено</span></div>
+  <input type="file" id="fileIn" multiple accept="image/*,video/*,audio/*,application/pdf" style="display:none">
+  <div class="row" style="margin-top:16px">
+    <button class="btn ghost" id="shAi">Дописать с Claude</button>
+    <button class="btn" id="shSave">Сохранить</button>
+  </div>
+  <button class="btn ghost" style="margin-top:8px;display:none" id="shDel">Удалить пост</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const NETS = {tg:{n:'Telegram',s:'TG',c:'n-tg'},ig:{n:'Instagram',s:'IG',c:'n-ig'},yt:{n:'YouTube',s:'YT',c:'n-yt'},tt:{n:'TikTok',s:'TT',c:'n-tt'}};
+const REM = [[null,'нет'],[0,'в момент'],[15,'за 15 мин'],[60,'за час'],[1440,'за день']];
+const STATUS = {published:['ok','опубликован'],failed:['bad','ошибка'],planned_manual:['man','ждёт ручной выкладки'],publishing:['man','публикуется']};
+const remLabel = m => (REM.find(r=>r[0]===m)||REM[0])[1];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),2600); };
+const haptic = () => { try{ tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light'); }catch(e){} };
+const netBadge = k => `<span class="net ${NETS[k].c}">${NETS[k].s}</span>`;
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+// ---------- API ----------
+async function api(path, opts = {}) {
+  const headers = { 'X-Telegram-Init-Data': (tg && tg.initData) || '', 'X-Timezone': TZ };
+  if (opts.body && !(opts.body instanceof FormData)) { headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(opts.body); }
+  const r = await fetch('/api' + path, { ...opts, headers });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 || r.status === 403) { $('#gateMsg').textContent = j.error || 'Нет доступа'; $('#gate').classList.add('on'); throw new Error(j.error); }
+  if (!r.ok) { toast(j.error || 'Ошибка сервера'); throw new Error(j.error); }
+  return j;
+}
+async function busy(btn, fn) { btn.classList.add('busy'); try { return await fn(); } finally { btn.classList.remove('busy'); } }
+
+// ---------- даты ----------
+const DAYS = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
+const DAYS_S = ['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'];
+const dayIdx = d => (d.getDay()+6)%7;
+const startOfWeek = d => { const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-dayIdx(x)); return x; };
+const addDays = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const hm = d => d.toTimeString().slice(0,5);
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmtD = d => d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+
+// ---------- состояние ----------
+const S = { me:null, remind:null, channels:[], ideas:[], posts:[], upcoming:[], week:startOfWeek(new Date()) };
+
+$('#dateLine').textContent = new Date().toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+
+// ---------- навигация ----------
+function go(p){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.p===p));
+  document.querySelectorAll('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
+  window.scrollTo(0,0);
+  if (p==='stats') renderStats();
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { haptic(); go(t.dataset.p); });
+const savedTheme = (()=>{ try { return localStorage.getItem('theme'); } catch(e){ return null; } })();
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+$('#themeBtn').onclick = () => { const r=document.documentElement; const dark = r.dataset.theme ? r.dataset.theme==='dark' : matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme = dark?'light':'dark'; try{ localStorage.setItem('theme', r.dataset.theme); }catch(e){} };
+
+function chipSet(el, opts, selected, multi, onChange){
+  el.innerHTML = opts.map(([k,l])=>`<span class="chip ${selected.includes(k)?'on':''}">${l}</span>`).join('');
+  el.querySelectorAll('.chip').forEach((c,i)=>c.onclick=()=>{
+    const k=opts[i][0];
+    if(multi){ const j=selected.indexOf(k); j<0?selected.push(k):selected.splice(j,1); }
+    else { selected.length=0; selected.push(k); }
+    chipSet(el, opts, selected, multi, onChange); onChange && onChange();
+  });
+}
+const NET_OPTS = Object.keys(NETS).map(k=>[k,NETS[k].n]);
+const netChips = (el, sel, multi=true, cb) => chipSet(el, NET_OPTS, sel, multi, cb);
+
+// ---------- загрузка ----------
+async function loadWeek(){
+  const from = S.week, to = addDays(S.week, 7);
+  S.posts = await api(`/posts?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`);
+  renderWeek();
+}
+async function loadUpcoming(){
+  const now = new Date();
+  S.upcoming = (await api(`/posts?from=${encodeURIComponent(now.toISOString())}&to=${encodeURIComponent(addDays(now,8).toISOString())}`))
+    .filter(p=>p.status==='planned');
+  renderPager(); renderRemList();
+}
+async function refresh(){ await Promise.all([loadWeek(), loadUpcoming()]); }
+
+// ---------- пейджер и напоминания ----------
+let pagerI = 0;
+function renderPager(){
+  const lines = S.upcoming.length ? S.upcoming.map(p=>{ const d=new Date(p.scheduled_at); return `${DAYS_S[dayIdx(d)]} ${hm(d)} ${p.nets.map(n=>NETS[n].s).join('+')}<br>${esc(p.title.toUpperCase().slice(0,24))}`; }) : ['НЕТ ПОСТОВ<br>НА БЛИЖАЙШУЮ НЕДЕЛЮ'];
+  pagerI %= lines.length;
+  $('#pagerLcd').innerHTML = `<span class="blink">▲</span> ${pagerI+1}/${lines.length} СЛЕД. ПОСТ<br>${lines[pagerI]}`;
+}
+$('#pagerNext').onclick = () => { pagerI++; renderPager(); haptic(); };
+function renderRemList(){
+  const u = S.upcoming.filter(p=>p.remind_min!=null).slice(0,6);
+  $('#remList').innerHTML = u.length ? u.map(p=>{ const at=new Date(p.scheduled_at), ping=new Date(at-p.remind_min*6e4);
+    return `<div class="rec"><span class="mono" style="font-size:15px;min-width:70px;color:var(--red)">${DAYS_S[dayIdx(ping)]} ${hm(ping)}</span><div><div style="font-weight:600">${esc(p.title)}</div><div class="sub">Пост в ${hm(at)}, напомню ${remLabel(p.remind_min)} · ${p.nets.map(netBadge).join(' ')}</div></div></div>`; }).join('')
+    : '<div class="empty">Ближайших напоминаний нет</div>';
+}
+async function saveRemind(){ await api('/remind',{method:'PUT',body:S.remind}); }
+function renderRemind(){
+  const r=S.remind;
+  $('#dailyTime').value=r.dailyTime;
+  [['dailyTgl','daily'],['emptyTgl','empty'],['weeklyTgl','weekly']].forEach(([id,k])=>{ const el=$('#'+id); el.classList.toggle('on',!!r[k]); el.onclick=async()=>{ r[k]=!r[k]; renderRemind(); await saveRemind(); toast(r[k]?'Включено':'Выключено'); }; });
+  const d=[r.def]; chipSet($('#defRem'), REM.slice(1,4), d, false, async()=>{ r.def=d[0]; await saveRemind(); });
+}
+$('#dailyTime').onchange = async e => { S.remind.dailyTime=e.target.value; await saveRemind(); toast('Сводка в '+e.target.value); };
+
+// ---------- ТЕМЫ ----------
+const ideaNets=['tg','ig'];
+netChips($('#ideaNets'), ideaNets);
+function renderIdeas(){
+  $('#ideaList').innerHTML = S.ideas.map((i,n)=>`<div class="card row between"><div><div style="font-weight:600;font-size:18px">${esc(i.title)}</div><div class="row" style="margin-top:6px;gap:6px">${i.nets.map(netBadge).join('')}<span class="sub mono" style="margin-left:6px">${esc(i.status)}</span></div></div><div style="display:grid;gap:6px"><button class="btn ghost sm" data-n="${n}">В неделю</button><button class="btn ghost sm" data-del="${n}">×</button></div></div>`).join('') || '<div class="empty">Пока пусто. Набросай первую тему выше.</div>';
+  $('#ideaList').querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{ const i=S.ideas[+b.dataset.n]; openSheet(null,{title:i.title,nets:i.nets,text:firstDraft(i.plan)}); });
+  $('#ideaList').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{ const i=S.ideas[+b.dataset.del]; await api('/ideas/'+i.id,{method:'DELETE'}); S.ideas.splice(+b.dataset.del,1); renderIdeas(); });
+}
+const firstDraft = plan => plan && plan.per_net && plan.per_net[0] ? plan.per_net[0].draft : '';
+
+let lastPlan = null, lastTopic = '';
+function renderPlan(topic, p){
+  return `<div class="card"><div class="kicker">Сценарий</div><div style="font:italic 700 22px 'Playfair Display',serif">${esc(topic)}</div>
+  <div class="ai"><div class="sub">Угол подачи</div>${esc(p.angle)}</div>
+  <div class="ai"><div class="sub">Хук</div>${esc(p.hook)}</div>
+  <div class="ai"><div class="sub">План</div>${p.plan.map((x,i)=>`${i+1}. ${esc(x)}`).join('<br>')}</div>
+  ${p.per_net.map(x=>`<div class="ai"><div class="sub">${NETS[x.net].n} · ${esc(x.format)}</div><div style="white-space:pre-wrap">${esc(x.draft)}</div></div>`).join('')}
+  <div class="ai"><div class="sub">Искать материалы</div><div class="chips">${p.material_queries.map(m=>`<span class="chip" data-q="${esc(m)}">${esc(m)}</span>`).join('')}</div></div>
+  <div class="row"><button class="btn ghost" id="toSchedule">В неделю</button><button class="btn" id="saveIdea">В дела</button></div></div>`;
+}
+$('#expandBtn').onclick = () => busy($('#expandBtn'), async () => {
+  const topic = $('#ideaIn').value.trim(); if(!topic){ toast('Напиши тему'); return; }
+  if(!ideaNets.length){ toast('Выбери площадку'); return; }
+  haptic();
+  $('#aiOut').innerHTML = `<div class="card"><span class="typing sub mono">Claude пишет сценарий</span></div>`;
+  try { lastPlan = await api('/claude/expand',{method:'POST',body:{topic,nets:ideaNets}}); lastTopic = topic; }
+  catch(e){ $('#aiOut').innerHTML=''; return; }
+  $('#aiOut').innerHTML = renderPlan(topic, lastPlan);
+  $('#aiOut').querySelectorAll('[data-q]').forEach(c=>c.onclick=()=>{ $('#searchIn').value=c.dataset.q; go('studio'); search(); });
+  $('#saveIdea').onclick = async () => { const i = await api('/ideas',{method:'POST',body:{title:topic,nets:ideaNets.slice(),status:'черновик',plan:lastPlan}}); S.ideas.unshift(i); renderIdeas(); $('#aiOut').innerHTML=''; $('#ideaIn').value=''; toast('Добавлено в дела'); };
+  $('#toSchedule').onclick = () => openSheet(null,{title:topic,nets:ideaNets.slice(),text:firstDraft(lastPlan)});
+});
+
+// ---------- НЕДЕЛЯ ----------
+let weekF = [];
+netChips($('#weekFilter'), weekF, true, renderWeek);
+let openDays = new Set([dayIdx(new Date())]);
+$('#prevWeek').onclick = () => { S.week = addDays(S.week,-7); loadWeek(); };
+$('#nextWeek').onclick = () => { S.week = addDays(S.week,7); loadWeek(); };
+function renderWeek(){
+  $('#weekRange').textContent = fmtD(S.week)+' — '+fmtD(addDays(S.week,6));
+  $('#chanLine').textContent = S.channels.length ? 'Канал: '+S.channels.map(c=>c.title).join(', ') : 'Канал не подключён: добавь бота админом в канал';
+  const today = ymd(new Date());
+  const byDay = DAYS.map(()=>[]);
+  S.posts.forEach(p=>byDay[dayIdx(new Date(p.scheduled_at))].push(p));
+  $('#week').innerHTML = DAYS.map((d,i)=>{
+    const date = addDays(S.week,i), isToday = ymd(date)===today;
+    const posts = byDay[i].filter(p=>!weekF.length||p.nets.some(n=>weekF.includes(n)));
+    return `<div class="day ${openDays.has(i)?'open':''}" data-i="${i}">
+      <div class="dayhead"><div><b>${d}</b>${isToday?'<span class="today">сегодня</span>':''}<div class="count">${fmtD(date)} · постов: ${byDay[i].length}</div></div>
+      <div class="row" style="gap:4px">${[...new Set(byDay[i].flatMap(p=>p.nets))].map(netBadge).join('')}</div></div>
+      <div class="daybody">${posts.map(p=>{ const st=STATUS[p.status];
+        return `<div class="post" data-id="${p.id}"><div class="t"><span class="time">${hm(new Date(p.scheduled_at))}</span>${esc(p.title)}</div>${p.text?`<div class="sub">${esc(p.text.slice(0,140))}${p.text.length>140?'…':''}</div>`:''}<div class="row meta" style="gap:6px;flex-wrap:wrap">${p.nets.map(netBadge).join('')}${p.files.length?`<span>📎 ${p.files.length}</span>`:''}${p.remind_min!=null&&p.status==='planned'?`<span class="mono">⏰ ${remLabel(p.remind_min)}</span>`:''}${st?`<span class="st ${st[0]}">${st[1]}</span>`:''}</div></div>`; }).join('')}
+      <button class="btn ghost sm" data-add="${i}">+ Пост, тема или материал</button></div></div>`;
+  }).join('');
+  document.querySelectorAll('.dayhead').forEach(h=>h.onclick=()=>{ const i=+h.parentNode.dataset.i; openDays.has(i)?openDays.delete(i):openDays.add(i); renderWeek(); });
+  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>openSheet(null,{date:addDays(S.week,+b.dataset.add)}));
+  document.querySelectorAll('.post').forEach(el=>el.onclick=()=>openSheet(S.posts.find(p=>p.id===+el.dataset.id)));
+}
+
+// ---------- шторка поста ----------
+let sh = {};
+function openSheet(post, preset={}){
+  const base = post ? JSON.parse(JSON.stringify(post)) : {
+    title:preset.title||'', text:preset.text||'', nets:preset.nets?preset.nets.slice():['tg'],
+    remind_min:S.remind?S.remind.def:15, files:preset.files||[], scheduled_at:null };
+  let when = base.scheduled_at ? new Date(base.scheduled_at) : (()=>{ const d=preset.date?new Date(preset.date):new Date(); d.setHours(18,0,0,0); if(d<new Date()) d.setDate(d.getDate()+1); return d; })();
+  sh = { id: post ? post.id : null, p: base };
+  $('#shKicker').textContent = post?'Редактировать':'Новый пост';
+  $('#shTitle').textContent = DAYS[dayIdx(when)];
+  const st = post && STATUS[post.status];
+  $('#shStatus').innerHTML = st ? `<span class="st ${st[0]}">${st[1]}</span> ${esc(post.error||'')}` : '';
+  $('#shTopic').value=base.title; $('#shText').value=base.text;
+  $('#shDate').value=ymd(when); $('#shTime').value=hm(when);
+  renderFiles();
+  netChips($('#shNets'), sh.p.nets);
+  sh.rem=[base.remind_min]; chipSet($('#shRem'), REM, sh.rem, false);
+  $('#shDel').style.display = post ? 'block' : 'none';
+  $('#sheet').classList.add('on'); $('#sheetBg').classList.add('on');
+}
+const renderFiles = () => $('#shFiles').textContent = sh.p.files.length ? sh.p.files.map(f=>f.name).join(', ') : 'ничего не прикреплено';
+const closeSheet = () => { $('#sheet').classList.remove('on'); $('#sheetBg').classList.remove('on'); };
+$('#sheetBg').onclick = closeSheet;
+$('#shFile').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = e => busy($('#shFile'), async () => {
+  const fd = new FormData(); [...e.target.files].forEach(f=>fd.append('files',f));
+  e.target.value='';
+  $('#shFiles').textContent = 'загружаю…';
+  try { sh.p.files.push(...await api('/files',{method:'POST',body:fd})); } finally { renderFiles(); }
+});
+$('#shAi').onclick = () => busy($('#shAi'), async () => {
+  const title=$('#shTopic').value.trim(); if(!title){ toast('Сначала напиши тему'); return; }
+  const r = await api('/claude/draft',{method:'POST',body:{title,text:$('#shText').value,nets:sh.p.nets}});
+  $('#shText').value = r.text; toast('Claude дописал текст');
+});
+$('#shSave').onclick = () => busy($('#shSave'), async () => {
+  const when = new Date(`${$('#shDate').value}T${$('#shTime').value||'18:00'}`);
+  const body = { title:$('#shTopic').value.trim()||'Без темы', text:$('#shText').value.trim(), nets:sh.p.nets, scheduled_at:when.toISOString(), remind_min:sh.rem[0], files:sh.p.files };
+  if(!body.nets.length){ toast('Выбери хотя бы одну сеть'); return; }
+  if(when < new Date()) { toast('Это время уже прошло'); return; }
+  if(sh.id) await api('/posts/'+sh.id,{method:'PUT',body}); else await api('/posts',{method:'POST',body});
+  S.week = startOfWeek(when); openDays.add(dayIdx(when));
+  closeSheet(); haptic(); await refresh();
+  toast(sh.rem[0]==null?'Сохранено':'Сохранено, напомню '+remLabel(sh.rem[0]));
+});
+$('#shDel').onclick = () => busy($('#shDel'), async () => { await api('/posts/'+sh.id,{method:'DELETE'}); closeSheet(); await refresh(); toast('Удалено'); });
+
+// ---------- СТУДИЯ ----------
+let matType=['photo'], found=[], selMats=[];
+chipSet($('#matTypes'), [['photo','Фото'],['video','Видео']], matType, false, ()=>search());
+function renderMats(){
+  $('#mats').innerHTML = found.map((m,i)=>`<div class="thumb ${selMats.includes(m)?'sel':''}" data-i="${i}"><img src="${esc(m.thumb)}" alt="" loading="lazy"><small>${esc(m.author||'')}</small></div>`).join('');
+  $('#mats').querySelectorAll('.thumb').forEach(t=>t.onclick=()=>{ const m=found[+t.dataset.i]; const i=selMats.indexOf(m); i<0?selMats.push(m):selMats.splice(i,1); renderMats(); renderTimeline(); });
+}
+async function search(){
+  const query=$('#searchIn').value.trim(); if(!query) return;
+  const r = await api(`/materials?query=${encodeURIComponent(query)}&type=${matType[0]}`);
+  if(!r.configured){ $('#mats').innerHTML='<div class="empty" style="grid-column:1/-1">Поиск материалов заработает после добавления ключа Pexels на сервере.</div>'; return; }
+  found = r.items.map(x=>({...x,kind:matType[0]})); renderMats();
+}
+$('#searchBtn').onclick = () => busy($('#searchBtn'), search);
+const fmtSel=['tt'];
+chipSet($('#fmt'), [['tg','Пост 1:1'],['ig','Рилс 9:16'],['yt','Видео 16:9'],['tt','TikTok 9:16']], fmtSel, false, ()=>updPrev());
+const colors=['#5a1a12','#6b4a14','#2f3b1e','#3b2a20','#4a1f2e'];
+function renderTimeline(){
+  $('#timeline').innerHTML = selMats.length ? selMats.map((m,i)=>`<div class="clip" style="background:${colors[i%5]}">${m.kind==='video'?'▶':'▣'} ${i+1}</div>`).join('') : `<div class="clip" style="color:#7a6248">выбери материалы выше</div>`;
+  $('#prev').style.backgroundImage = selMats[0] ? `url("${selMats[0].thumb}")` : '';
+  $('#prev').style.backgroundSize = 'cover';
+  $('#prevEmoji').style.display = selMats[0] ? 'none' : '';
+}
+function updPrev(){
+  $('#prevCap').textContent = $('#capIn').value;
+  $('#prev').style.aspectRatio = fmtSel[0]==='yt'?'16/9':fmtSel[0]==='tg'?'1/1':'9/16';
+}
+$('#capIn').oninput = updPrev;
+const d0=new Date(); $('#stamp').textContent = `${String(d0.getDate()).padStart(2,'0')} ${String(d0.getMonth()+1).padStart(2,'0')} '${String(d0.getFullYear()).slice(2)}`;
+renderTimeline();
+$('#toWeek').onclick = () => busy($('#toWeek'), async () => {
+  const files = selMats.length ? await api('/files/url',{method:'POST',body:{items:selMats.map(m=>({url:m.url,kind:m.kind}))}}) : [];
+  openSheet(null,{title:$('#capIn').value,nets:[fmtSel[0]],files});
+});
+
+// ---------- СТАТИСТИКА ----------
+const statSel=['tg'];
+netChips($('#statNets'), statSel, false, renderStats);
+const sum = a => a.reduce((x,y)=>x+y,0);
+const fmtN = n => n>=1000?(n/1000).toFixed(n>=10000?0:1).replace('.',',')+'k':String(n);
+function chart(days){
+  const W=320,H=130,Pd=18, max=Math.max(1,...days.map(d=>Math.max(d.gain,d.lost)))*1.15, bw=(W-Pd*2)/days.length;
+  const bars = days.map((d,i)=>{ const x=Pd+i*bw; const hg=(d.gain/max)*(H-30), hl=(d.lost/max)*(H-30);
+    return `<rect x="${x+bw*0.14}" y="${H-18-hg}" width="${bw*0.34}" height="${hg}" fill="var(--gold)"/><rect x="${x+bw*0.52}" y="${H-18-hl}" width="${bw*0.34}" height="${hl}" fill="var(--red)"/><text x="${x+bw/2}" y="${H-4}" text-anchor="middle">${DAYS_S[dayIdx(new Date(d.day+'T12:00'))]}</text>`; }).join('');
+  return `<div class="row sub mono" style="gap:14px;margin-bottom:4px;font-size:12px"><span><span style="display:inline-block;width:10px;height:10px;background:var(--gold)"></span> пришло</span><span><span style="display:inline-block;width:10px;height:10px;background:var(--red)"></span> ушло</span></div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Подписки и отписки по дням"><line x1="${Pd}" x2="${W-Pd}" y1="${H-18}" y2="${H-18}" stroke="var(--line)"/>${bars}</svg>`;
+}
+async function renderStats(){
+  const k=statSel[0];
+  $('#statsBody').innerHTML = '<div class="card"><span class="typing sub mono">Считаю</span></div>';
+  const d = await api('/stats?net='+k);
+  if(!d.connected){
+    $('#statsBody').innerHTML = k==='tg'
+      ? '<div class="card empty">Канал не подключён. Добавь бота в свой канал администратором с правом публикации, и я начну считать подписки, отписки и реакции.</div>'
+      : `<div class="card empty">${NETS[k].n} пока не подключён. Подключим, когда будет доступ к API площадки.</div>`;
+    return;
+  }
+  const g=sum(d.days.map(x=>x.gain)), l=sum(d.days.map(x=>x.lost)), r=sum(d.days.map(x=>x.react));
+  $('#statsBody').innerHTML = `<div class="card">
+    <div class="kpis">
+      <div class="kpi"><div class="l">Подписчики</div><div class="v">${fmtN(d.followers)}</div><div class="${g-l>=0?'up':'down'} mono" style="font-size:12px">${g-l>=0?'+':'−'}${fmtN(Math.abs(g-l))} нетто</div></div>
+      <div class="kpi"><div class="l">Пришло / ушло</div><div class="v up">+${fmtN(g)}</div><div class="down mono" style="font-size:12px">−${fmtN(l)}</div></div>
+      <div class="kpi"><div class="l">Реакции</div><div class="v">${fmtN(r)}</div><div class="sub mono" style="font-size:12px">на посты недели</div></div>
+    </div><div style="margin-top:14px">${chart(d.days)}</div></div>
+    <h2>Что заходит</h2><div class="card">${d.top.length ? d.top.map((t,i)=>`<div class="rec"><span class="e">${['I','II','III'][i]}</span><div><div style="font-weight:600">${esc(t.title)}</div><div class="sub mono">${t.reactions} реакций · ${esc(t.at)}</div></div></div>`).join('') : '<div class="empty">Появится после первых опубликованных постов</div>'}</div>
+    <h2>Совет консильери</h2><div class="card" id="recs"><span class="typing sub mono">Claude думает</span></div>`;
+  try {
+    const rec = await api('/recs?net='+k);
+    $('#recs').innerHTML = rec.items.length ? rec.items.map((x,i)=>`<div class="rec"><span class="e">${i+1}.</span><div><div style="font-weight:600">${esc(x.title)}</div><div class="sub">${esc(x.detail)}</div></div></div>`).join('') : '<div class="empty">Пока мало данных для советов</div>';
+  } catch(e) { $('#recs').innerHTML = '<div class="empty">Советы сейчас недоступны</div>'; }
+}
+
+// ---------- старт ----------
+(async () => {
+  const me = await api('/me');
+  S.me = me.user; S.remind = me.remind; S.channels = me.channels;
+  renderRemind();
+  S.ideas = await api('/ideas'); renderIdeas();
+  await refresh();
+})().catch(e => console.error(e));
+</script>
+</body>
+</html>
