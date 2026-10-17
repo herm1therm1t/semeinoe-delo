@@ -13,6 +13,7 @@ const SYSTEM = `Ты контент-продюсер автора, которы�
 export class ClaudeRefusal extends Error {}
 
 async function ask(prompt, schema) {
+  if (!process.env.ANTHROPIC_API_KEY) throw new ClaudeRefusal('Claude не подключён: добавь ANTHROPIC_API_KEY в переменные хостинга');
   const res = await client.beta.messages.parse({
     model: MODEL,
     max_tokens: 16000,
